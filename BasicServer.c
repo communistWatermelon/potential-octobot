@@ -20,7 +20,7 @@ io worker / processing
 #include <pthread.h>
 #include <netinet/in.h>
 #include <stdlib.h>
-#include <strings.h>
+#include <string.h>
 #include <arpa/inet.h>
 
 #define SERVER_PORT 7000
@@ -46,11 +46,13 @@ int main()
     int port = SERVER_PORT;
     socklen_t clientLength = 0;
     pthread_t clientThread;
-        
+
     struct sockaddr_in server, client_addr;
     ClientWrapper arguments;
     
+
     createSocket(&listenSocket);
+    SocketOptions(&listenSocket);
     bindSocket(&listenSocket, &server, &port);
     
     listen(listenSocket, 5);
@@ -123,19 +125,22 @@ void *serviceClient(void *clientInfo)
     char *bp = 0;
     char buf[BUFLEN] = { 0 };
     
-    ClientWrapper* info = (ClientWrapper *) clientInfo;
+    int socket = *((ClientWrapper *) (clientInfo))->client_socket;
     
-    printf(" Remote Address:  %s\n", inet_ntoa((info->client)->sin_addr));
+    struct sockaddr_in* client = malloc(sizeof(struct sockaddr_in));
+    memcpy(client, ((ClientWrapper *) clientInfo)->client, sizeof(struct sockaddr_in));    
+   
+    printf(" Remote Address:  %s\n", inet_ntoa(client->sin_addr));
 	bp = buf;
 	bytes_to_read = BUFLEN;
-	while ((n = recv (*(info->client_socket), bp, bytes_to_read, 0)) < BUFLEN)
+	while ((n = recv (socket, bp, bytes_to_read, 0)) < BUFLEN)
 	{
 		bp += n;
 		bytes_to_read -= n;
 	}
 	printf ("sending:%s\n", buf);
 
-	send (*(info->client_socket), buf, BUFLEN, 0);
-	close (*(info->client_socket));
+	send (socket, buf, BUFLEN, 0);
+	close (socket);
 	return 0;
 }
