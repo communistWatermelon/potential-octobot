@@ -2,16 +2,11 @@
 	main / listener
 	set up server
 	bind to port
-	accept connection
-		add client to list
-		create io worker
-
-io worker
-	receive connection
-	add to select
 	wait for select call
-		create processing worker
-
+    	accept connection
+	    	add client to list
+	    	create processing worker
+	    	
 processing worker
 	if client disconnects
 		remove client from list
@@ -28,6 +23,7 @@ processing worker
 #include <stdlib.h>
 #include <string.h>
 #include <arpa/inet.h>
+#include <signal.h>
 
 #define SERVER_PORT 7000
 #define BUFLEN  80 
@@ -35,12 +31,9 @@ processing worker
 #define TRUE 1
 typedef struct
 {
-    int maxi;
     int * client;
     int sockfd;
-    fd_set rset;
     fd_set allset;
-    int nready;
     int i;
 } SelectWrapper ;
 
@@ -49,28 +42,21 @@ void bindSocket(int*, struct sockaddr_in*, int*);
 void acceptClient(int*, int*, struct sockaddr*, socklen_t*);
 void SocketOptions(int*);
 void *serviceClient(void*);
-void *ioworker(void*);
-void addDescriptor(int*, int, fd_set *, int*, int*);
-
-int nready = 0;
-int sockfd = 0;
-int maxfd = 0;
-int client[FD_SETSIZE];
-int maxi = -1;
-fd_set rset;
-fd_set allset;
+void ioworker(int *, int, int, int, fd_set, fd_set);
+void addDescriptor(int*, int*, int*, int*, fd_set*);
     
 int main()
 {
-    int listenSocket = 0;
-    int newSocket = 0;
+    int client[FD_SETSIZE];
+    int nready, sockfd, maxfd;
+    int maxi = -1;
+    int listenSocket, newSocket = 0;
     int port = SERVER_PORT;
-
-    socklen_t clientLength = 0;
-    pthread_t ioThread = 0;
-        
+    fd_set rset;
+    fd_set allset;
+    size_t i = 0;
+    socklen_t clientLength = 0;    
     struct sockaddr_in server, client_addr;
-    SelectWrapper arguments;
     
     createSocket(&listenSocket);
     SocketOptions(&listenSocket);
@@ -80,13 +66,12 @@ int main()
     maxfd = listenSocket;
     maxi = -1;
     
-    size_t i = 0;
     for (i = 0; i < FD_SETSIZE; i++)
         client[i] = -1;
     
     FD_ZERO(&allset);
     FD_SET(listenSocket, &allset);
-    
+
     while (TRUE)
     {
         rset = allset;
@@ -95,27 +80,81 @@ int main()
         if (FD_ISSET(listenSocket, &rset)) /* New client connection */
         {
             acceptClient(&listenSocket, &newSocket, (struct sockaddr *)&client_addr, &clientLength);
-            addDescriptor(client, newSocket, &allset, &maxfd, &maxi);
+            addDescriptor(client, &newSocket, &maxfd, &maxi, &allset);
+            
         	if (--nready <= 0)
-        		continue;	// no more readable descriptors
+        	printf("no more things\n\n");
+        		continue;	/* no more readable descriptors */
         }
         
-        //arguments.maxi = maxi;
-        //arguments.client = client;
-        //arguments.sockfd = sockfd;
-//        arguments.rset = rset;
-  //      arguments.allset = allset;
-    //    arguments.nready = nready;
-    
-        if (pthread_create(&ioThread, NULL, &ioworker, (void *) &arguments) != 0)
-        {
-            perror ("Can't create thread!");
-            exit(1);
-        }
+        ioworker(client, sockfd, nready, maxi, rset, allset);
     }
     
     close(listenSocket);
     return 0;
+}
+
+void ioworker(int *client, int sockfd, int nready, int maxi, fd_set rset, fd_set allset)
+{
+    size_t i = 0;
+    pthread_t processingThread;
+    SelectWrapper * info;
+    
+    for (i = 0; i <= maxi; i++)	/* check all clients for data */
+	{
+	    if ((sockfd = client[i]) < 0)
+	    	continue;
+
+	    if (FD_ISSET(sockfd, &rset))
+ 		{
+ 		
+ 		    info = malloc(sizeof(SelectWrapper));
+ 		    info->client = client;
+ 		    info->sockfd = sockfd;
+ 		    info->i      = i;
+ 		    info->allset = allset;
+ 		
+ 			if (pthread_create(&processingThread, NULL, &serviceClient, (void *) info) != 0)
+            {
+                perror ("Can't create thread!");
+                exit(1);
+            }
+            
+            if (--nready <= 0)
+	    	    break;
+	    }
+    }
+}
+
+void *serviceClient(void *selectInfo)
+{
+    int n = 0, bytes_to_read = 0;
+    char *bp = 0;
+    char buf[BUFLEN] = { 0 };
+  
+    SelectWrapper * info = (SelectWrapper *)selectInfo;
+   
+	bp = buf;
+    bytes_to_read = BUFLEN;
+    
+    while ((n = read(info->sockfd, bp, bytes_to_read)) > 0)
+    {
+	    bp += n;
+	    bytes_to_read -= n;
+    }
+    
+    printf("read %s\n", buf);
+    write(info->sockfd, buf, BUFLEN);
+    printf("sending %s\n", buf);
+    
+    if (n == 0)
+    {
+        close(info->sockfd);
+        FD_CLR(info->sockfd, &info->allset);
+        info->client[info->i] = -1;
+    }
+    
+    return NULL;
 }
 
 void createSocket(int * listen_socket)
@@ -162,15 +201,18 @@ void SocketOptions(int * socket)
     }
 }
 
-void addDescriptor(int * client, int newSocket, fd_set * allset, int * maxfd, int * maxi)
+void addDescriptor(int * client, int * newSocket, int * maxfd, int * maxi, fd_set * allset)
 {
     size_t i = 0;
+    
     for (i = 0; i < FD_SETSIZE; i++)
+    {
 		if (client[i] < 0)
 		{
-	        client[i] = newSocket;	// save descriptor
+	        client[i] = *newSocket;	/* save descriptor */
             break;
 		}
+	}
 	
 	if (i == FD_SETSIZE)
 	{
@@ -178,77 +220,14 @@ void addDescriptor(int * client, int newSocket, fd_set * allset, int * maxfd, in
 		exit(1);
 	}
 	
-    FD_SET(newSocket, allset);
-    if (newSocket > *maxfd)
-        *maxfd = newSocket;
-    if (i > *maxi)
-		*maxi = i;	// new max index in client[] array
-}
-
-void *ioworker(void *selectInfo)
-{
-    size_t i = 0;
-    pthread_t processingThread;
-       
-  //  SelectWrapper * info; //= malloc(sizeof(SelectWrapper));
-   // memcpy(info, (SelectWrapper*) selectInfo, sizeof(SelectWrapper));
-    
-    for (i = 0; i <= maxi; i++)	// check all clients for data
-	{
-	    if ((sockfd = client[i]) < 0)
-	    	continue;
-
-	    if (FD_ISSET(sockfd, &rset))
- 		{
-// 		    info->i = i;
- 			if (pthread_create(&processingThread, NULL, &serviceClient, (void *) &i) != 0)
-            {
-                perror ("Can't create thread!");
-                exit(1);
-            }
-            
-            if (--nready <= 0)
-	    	    break;
-	    }
-    }
-//    free(info);
-    return NULL;
-}
-
-void *serviceClient(void *selectInfo)
-{
-    int n = 0, bytes_to_read = 0;
-    char *bp = 0;
-    char buf[BUFLEN] = { 0 };
-  
-    int i = *((int *) selectInfo);  
-//    SelectWrapper * info = malloc(sizeof(SelectWrapper));
-   // memcpy(info, (SelectWrapper *)selectInfo, sizeof(SelectWrapper)); /*(SelectWrapper *) selectInfo;*/  
-   
-	bp = buf;
-    bytes_to_read = BUFLEN;
-    while ((n = read(sockfd, bp, bytes_to_read)) > 0)
+    FD_SET(*newSocket, allset);
+    if (*newSocket > *maxfd)
     {
-	    bp += n;
-	    bytes_to_read -= n;
+        *maxfd = *newSocket;
     }
-    
-    printf("read: %s\n", buf);
-    
-//    if (n != 0)
-  //  {
-        write(sockfd, buf, BUFLEN);
-        printf("sending %s\n", buf);
-    //}
-    
-    if (n == 0)
-	{
-	//    printf(" Remote Address:  %s closed connection\n", inet_ntoa(client_addr.sin_addr));
-	    close(sockfd);
-	    FD_CLR(sockfd, &allset);
-		client[i] = -1;
+       
+    if (i > *maxi)
+    {
+		*maxi = i;	/* new max index in client[] array */
 	}
-    
-//    free(info);
-	return NULL;
 }
