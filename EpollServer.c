@@ -42,24 +42,19 @@ processing worker
 #define EPOLL_QUEUE_LEN	256
 #define TRUE  1
 #define FALSE 0
-typedef struct
-{
-    int * client;
-    int sockfd;
-    fd_set allset;
-    int i;
-} SelectWrapper ;
 
+int acceptClient(int*, struct epoll_event*);
 void createSocket(int*);
 void bindSocket(int*, struct sockaddr_in*, int*);
-int acceptClient(int*, struct epoll_event*);
 void SocketOptions(int*);
 void *serviceClient(void*);
 void ioworker(int *, int, int, int, fd_set, fd_set);
-static void SystemFatal (const char* message);
-static int ClearSocket (int fd);
-void close_fd (int);
-    
+void initEpoll(int*, struct epoll_event*);
+void close_fd(int);
+void signalHandle();
+static void SystemFatal(const char* message);
+static int ClearSocket(int fd);
+
 int listenSocket;
 
 int main()
@@ -68,33 +63,14 @@ int main()
     size_t i = 0;
 	int num_fds, epoll_fd;
 	static struct epoll_event events[EPOLL_QUEUE_LEN], event;
-	struct sigaction act;
     struct sockaddr_in server;
-    
-    act.sa_handler = close_fd;
-    act.sa_flags = 0;
-    if ((sigemptyset (&act.sa_mask) == -1 || sigaction (SIGINT, &act, NULL) == -1))
-    {
-        perror ("Failed to set SIGINT handler");
-        exit (EXIT_FAILURE);
-    }
 
+    signalHandle();
     createSocket(&listenSocket);
     SocketOptions(&listenSocket);
-    bindSocket(&listenSocket, &server, &port);
+    bindSocket(&listenSocket, &server, &port);    
+    initEpoll(&epoll_fd, &event);
     
-    if (listen (listenSocket, SOMAXCONN) == -1) 
-		SystemFatal("listen");
-    
-    epoll_fd = epoll_create(EPOLL_QUEUE_LEN);
-	if (epoll_fd == -1) 
-		SystemFatal("epoll_create");
-		
-	event.events = EPOLLIN | EPOLLERR | EPOLLHUP | EPOLLET;
-	event.data.fd = listenSocket;
-	if (epoll_ctl (epoll_fd, EPOLL_CTL_ADD, listenSocket, &event) == -1) 
-		SystemFatal("epoll_ctl");
-
     while (TRUE)
     {
         num_fds = epoll_wait (epoll_fd, events, EPOLL_QUEUE_LEN, -1);
@@ -131,14 +107,23 @@ int main()
     return 0;
 }
 
+void *ioworker(void *arg)
+{
+    return NULL;
+}
+
+void *serviceClient(void *arg
+{   
+    return NULL;
+}
+
 static int ClearSocket (int fd) 
 {
 	int	n, bytes_to_read;
-	char	*bp, buf[BUFLEN];
+	char *bp, buf[BUFLEN];
 
 	while (TRUE)
-	{
-		
+	{	
 		bp = buf;
 		bytes_to_read = BUFLEN;
 		while ((n = recv (fd, bp, bytes_to_read, 0)) < BUFLEN)
@@ -167,16 +152,6 @@ void close_fd (int signo)
 {
     close(listenSocket);
 	exit (EXIT_SUCCESS);
-}
-
-void ioworker(int *client, int sockfd, int nready, int maxi, fd_set rset, fd_set allset)
-{
-
-}
-
-void *serviceClient(void *selectInfo)
-{   
-    return NULL;
 }
 
 void createSocket(int * listen_socket)
@@ -243,3 +218,32 @@ void SocketOptions(int * socket)
     if (fcntl (*socket, F_SETFL, O_NONBLOCK | fcntl (*socket, F_GETFL, 0)) == -1) 
 		SystemFatal("fcntl");
 }
+
+void initEpoll(int * epoll_fd, struct epoll_event* event)
+{
+    if (listen (listenSocket, SOMAXCONN) == -1) 
+		SystemFatal("listen");
+    
+    *epoll_fd = epoll_create(EPOLL_QUEUE_LEN);
+	if (*epoll_fd == -1) 
+		SystemFatal("epoll_create");
+		
+	event->events = EPOLLIN | EPOLLERR | EPOLLHUP | EPOLLET;
+	event->data.fd = listenSocket;
+	if (epoll_ctl (*epoll_fd, EPOLL_CTL_ADD, listenSocket, event) == -1) 
+		SystemFatal("epoll_ctl");
+}
+
+
+void signalHandle()
+{
+	struct sigaction act;
+    act.sa_handler = close_fd;
+    act.sa_flags = 0;
+    if ((sigemptyset (&act.sa_mask) == -1 || sigaction (SIGINT, &act, NULL) == -1))
+    {
+        perror ("Failed to set SIGINT handler");
+        exit (EXIT_FAILURE);
+    }
+}
+
