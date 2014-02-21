@@ -73,7 +73,8 @@ int main (int argc, char* argv[])
 	struct sockaddr_in addr, remote_addr;
 	socklen_t addr_size = sizeof(struct sockaddr_in);
 	struct sigaction act;
-	pthread_t clientThread;
+    pthread_t clientThread;
+    pthread_attr_t tattr;
 	//info.events = calloc(EPOLL_QUEUE_LEN, sizeof(struct epoll_event));
 
 	// set up the signal handler to close the server socket when CTRL-c is received
@@ -125,7 +126,19 @@ int main (int argc, char* argv[])
 	//info.epoll_fd = &epoll_fd;
 	//info.events = &events;
 
- 	if (pthread_create(&clientThread, NULL, &serviceClient, (void *) &info) != 0)
+ 	if (pthread_attr_init(&tattr) != 0)
+    {	
+    	perror ("Can't init thread attributes!");
+        exit(1);	
+    }
+
+    if (pthread_attr_setdetachstate(&tattr,PTHREAD_CREATE_DETACHED) != 0)
+    {
+    	perror ("Can't detach thread!");
+        exit(1);	
+    }
+
+    if (pthread_create(&clientThread, &tattr, &serviceClient, NULL) != 0)
     {
         perror ("Can't create thread!");
         exit(1);
@@ -178,9 +191,9 @@ int main (int argc, char* argv[])
 				printf(" Remote Address:  %s\n", inet_ntoa(remote_addr.sin_addr));
 				continue;
     		}
-	
-			char b = 'b'; 
-			write(p[1], &b, 1);
+			
+			int b = i;
+			write(p[1], &b, sizeof(b));
 		}
 	}
 	close(fd_server);
@@ -190,19 +203,18 @@ int main (int argc, char* argv[])
 
 void * serviceClient(void * arg)
 {
-	int num_fds = 0;
-	int i = 0; 
-	char a;
+	int a = 0;
 
 	while(TRUE)
 	{
-		read(p[0], &a, 1);
+		read(p[0], &a, sizeof(a));
+		
 		// Case 3: One of the sockets has read data
-		if (!ClearSocket(info.events[i].data.fd)) 
+		if (!ClearSocket(info.events[a].data.fd)) 
 		{
 			// epoll will remove the fd from its set
 			// automatically when the fd is closed
-			close (info.events[i].data.fd);
+			close (info.events[a].data.fd);
 		}
 	}
 	return NULL;
@@ -223,15 +235,10 @@ static int ClearSocket (int fd)
 			bp += n;
 			bytes_to_read -= n;
 		}
-		printf ("sending:%s\n", buf);
 
 		send (fd, buf, BUFLEN, 0);
-		close (fd);
-		return TRUE;
+		return 0;
 	}
-	close(fd);
-	return(0);
-
 }
 
 // Prints the error stored in errno and aborts the program.
