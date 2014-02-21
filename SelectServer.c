@@ -29,6 +29,14 @@ processing worker
 #define BUFLEN  80 
 #define MAXLINE 4096
 #define TRUE 1
+#define THING 5000
+
+
+int client[FD_SETSIZE];
+int sockfd;
+fd_set allset;
+size_t i;
+
 typedef struct
 {
     int * client;
@@ -44,17 +52,18 @@ void SocketOptions(int*);
 void *serviceClient(void*);
 void ioworker(int *, int, int, int, fd_set, fd_set);
 void addDescriptor(int*, int*, int*, int*, fd_set*);
+static void SystemFatal(const char* message);
     
 int main()
 {
-    int client[FD_SETSIZE];
-    int nready, sockfd, maxfd;
+    //int client[FD_SETSIZE];
+    int nready, /*sockfd = 0,*/ maxfd;
     int maxi = -1;
     int listenSocket, newSocket = 0;
     int port = SERVER_PORT;
     fd_set rset;
-    fd_set allset;
-    size_t i = 0;
+    //fd_set allset;
+    i = 0;
     socklen_t clientLength = 0;    
     struct sockaddr_in server, client_addr;
     
@@ -79,25 +88,60 @@ int main()
     
         if (FD_ISSET(listenSocket, &rset)) /* New client connection */
         {
-            acceptClient(&listenSocket, &newSocket, (struct sockaddr *)&client_addr, &clientLength);
-            addDescriptor(client, &newSocket, &maxfd, &maxi, &allset);
+            //acceptClient(&listenSocket, &newSocket, (struct sockaddr *)&client_addr, &clientLength);
+            //addDescriptor(client, &newSocket, &maxfd, &maxi, &allset);
             
-        	if (--nready <= 0)
-        	printf("no more things\n\n");
-        		continue;	/* no more readable descriptors */
+//        	if (--nready <= 0)
+  //      		continue;	/* no more readable descriptors */
+            clientLength = sizeof(client_addr);
+            if ((newSocket = accept(listenSocket, (struct sockaddr *) &client_addr, &clientLength)) == -1)
+                SystemFatal("accept error");
+            
+            printf(" Remote Address:  %s\n", inet_ntoa(client_addr.sin_addr));
+
+            for (i = 0; i < FD_SETSIZE; i++)
+                if (client[i] < 0)
+                {
+                    client[i] = newSocket; // save descriptor
+                    break;
+                }
+    
+            if (i == FD_SETSIZE)
+            {
+                printf ("Too many clients\n");
+                exit(1);
+            }
+
+            FD_SET (newSocket, &allset);     // add new descriptor to set
+            if (newSocket > maxfd)
+                maxfd = newSocket; // for select
+
+            if (i > maxi)
+                maxi = i;   // new max index in client[] array
+
+            if (--nready <= 0)
+                continue;   // no more readable descriptors
         }
         
         ioworker(client, sockfd, nready, maxi, rset, allset);
     }
     
+    //free(info);
     close(listenSocket);
     return 0;
+}
+
+static void SystemFatal(const char* message)
+{
+    perror (message);
+    exit (EXIT_FAILURE);
 }
 
 void ioworker(int *client, int sockfd, int nready, int maxi, fd_set rset, fd_set allset)
 {
     size_t i = 0;
     pthread_t processingThread;
+    pthread_attr_t tattr;
     SelectWrapper * info;
     
     for (i = 0; i <= maxi; i++)	/* check all clients for data */
@@ -114,14 +158,28 @@ void ioworker(int *client, int sockfd, int nready, int maxi, fd_set rset, fd_set
  		    info->i      = i;
  		    info->allset = allset;
  		
- 			if (pthread_create(&processingThread, NULL, &serviceClient, (void *) info) != 0)
+    		/*if (pthread_attr_init(&tattr) != 0)
+            {   
+                perror ("Can't init thread attributes!");
+                exit(1);    
+            }
+
+            if (pthread_attr_setdetachstate(&tattr,PTHREAD_CREATE_DETACHED) != 0)
+            {
+                perror ("Can't detach thread!");
+                exit(1);    
+            }
+
+            if (pthread_create(&processingThread, &tattr, &serviceClient, (void *) info) != 0)
             {
                 perror ("Can't create thread!");
                 exit(1);
-            }
-            
+            }*/
+
+            serviceClient((void*) info);
+                
             if (--nready <= 0)
-	    	    break;
+    	    	    break;
 	    }
     }
 }
@@ -143,15 +201,14 @@ void *serviceClient(void *selectInfo)
 	    bytes_to_read -= n;
     }
     
-    printf("read %s\n", buf);
     write(info->sockfd, buf, BUFLEN);
-    printf("sending %s\n", buf);
     
     if (n == 0)
     {
         close(info->sockfd);
         FD_CLR(info->sockfd, &info->allset);
         info->client[info->i] = -1;
+        free(info);
     }
     
     return NULL;

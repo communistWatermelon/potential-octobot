@@ -46,10 +46,10 @@ int main()
     int port = SERVER_PORT;
     socklen_t clientLength = 0;
     pthread_t clientThread;
+    pthread_attr_t tattr;
 
     struct sockaddr_in server, client_addr;
     ClientWrapper arguments;
-    
 
     createSocket(&listenSocket);
     SocketOptions(&listenSocket);
@@ -65,7 +65,19 @@ int main()
         
         printf("Got a connection!");
         
-        if (pthread_create(&clientThread, NULL, &serviceClient, (void *) &arguments) != 0)
+		if (pthread_attr_init(&tattr) != 0)
+        {	
+        	perror ("Can't init thread attributes!");
+            exit(1);	
+        }
+
+        if (pthread_attr_setdetachstate(&tattr,PTHREAD_CREATE_DETACHED) != 0)
+        {
+        	perror ("Can't detach thread!");
+            exit(1);	
+        }
+
+        if (pthread_create(&clientThread, &tattr, &serviceClient, (void *) &arguments) != 0)
         {
             perror ("Can't create thread!");
             exit(1);
@@ -141,6 +153,7 @@ void *serviceClient(void *clientInfo)
 	printf ("sending:%s\n", buf);
 
 	send (socket, buf, BUFLEN, 0);
+	free(client);
 	close (socket);
-	return 0;
+	return NULL;
 }
