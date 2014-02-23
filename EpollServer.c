@@ -225,9 +225,10 @@ static int ClearSocket (int fd)
 	int	n, bytes_to_read;
 	char	*bp, buf[BUFLEN];
 
-	while (TRUE)
+	bp = buf;
+	bytes_to_read = BUFLEN;
+	/*while (TRUE)
 	{
-		
 		bp = buf;
 		bytes_to_read = BUFLEN;
 		while ((n = recv (fd, bp, bytes_to_read, 0)) < BUFLEN)
@@ -238,7 +239,26 @@ static int ClearSocket (int fd)
 
 		send (fd, buf, BUFLEN, 0);
 		return 0;
-	}
+	}*/
+
+	do
+    {
+        n = 0;
+
+        while ((n = recv (fd, bp, bytes_to_read, 0)) < BUFLEN)
+    	{
+            if (n <= 0)
+                break;
+    		bp += n;
+    		bytes_to_read -= n;
+    	}
+
+    	if (n > 0)
+        {
+            printf ("sending message of size: %d\n", sizeof(buf));
+            send (fd, buf, BUFLEN, 0);
+        }
+    } while (n > 0);
 }
 
 // Prints the error stored in errno and aborts the program.

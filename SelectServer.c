@@ -203,13 +203,13 @@ void *serviceClient(void *selectInfo)
     
     write(info->sockfd, buf, BUFLEN);
     
-    if (n == 0)
+    /*if (n == 0)
     {
         close(info->sockfd);
         FD_CLR(info->sockfd, &info->allset);
         info->client[info->i] = -1;
         free(info);
-    }
+    }*/
     
     return NULL;
 }

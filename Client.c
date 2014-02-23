@@ -42,6 +42,7 @@
 
 char * message;
 int count;
+int loop;
 
 void createSocket(int*);
 void* sendData(void*);
@@ -59,6 +60,7 @@ int main (int argc, char **argv)
 	char  *host;
     pthread_t clientThread[clients];
     size_t i  = 0;
+    loop = 1;
 
 	switch(argc)
 	{
@@ -80,6 +82,13 @@ int main (int argc, char **argv)
 			port =	atoi(argv[2]);	// User specified port
 			messageSize = atoi(argv[3]);
 			clients = atoi(argv[4]); // threads
+		break;
+		case 6: 
+			host =	argv[1];
+			port =	atoi(argv[2]);	// User specified port
+			messageSize = atoi(argv[3]);
+			clients = atoi(argv[4]); // threads
+			loop = atoi(argv[5]);
 		break;
 		default:
 			fprintf(stderr, "Usage: %s [host] [port] [messageSize] [threads]\n", argv[0]);
@@ -165,19 +174,27 @@ void* sendData(void * args)
 	int n = 0, bytes_to_read = BUFLEN;
 	char *bp, rbuf[BUFLEN];
 	int sd = *((int *) args);
+	size_t i =0;
 
-	send (sd, message, BUFLEN, 0);
-	bp = rbuf;
+	printf("Thread %d is sending!\n", (++count));
 
-	printf("Thread %d is sending!\n", (count + 1));
-
-	while ((n = recv (sd, bp, bytes_to_read, 0)) < BUFLEN)
+	for (i = 0; i < loop; i++)
 	{
-		bp += n;
-		bytes_to_read -= n;
+		send (sd, message, BUFLEN, 0);
+		bp = rbuf;
+
+		while ((n = recv (sd, bp, bytes_to_read, 0)) < BUFLEN)
+		{
+			bp += n;
+			bytes_to_read -= n;
+		}
+
+		n = 0;
+		bytes_to_read = BUFLEN;
 	}
 
-	printf("... Thread %d Complete!\n", (1 + count++));
-	close(sd);
+	printf("... Thread %d Complete!\n", (count));
+	
+	//close(sd);
 	return NULL;
 }

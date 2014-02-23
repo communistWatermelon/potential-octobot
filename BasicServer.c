@@ -136,6 +136,7 @@ void *serviceClient(void *clientInfo)
     int n = 0, bytes_to_read = 0;
     char *bp = 0;
     char buf[BUFLEN] = { 0 };
+    int x = 1;
     
     int socket = *((ClientWrapper *) (clientInfo))->client_socket;
     
@@ -145,15 +146,26 @@ void *serviceClient(void *clientInfo)
     printf(" Remote Address:  %s\n", inet_ntoa(client->sin_addr));
 	bp = buf;
 	bytes_to_read = BUFLEN;
-	while ((n = recv (socket, bp, bytes_to_read, 0)) < BUFLEN)
-	{
-		bp += n;
-		bytes_to_read -= n;
-	}
-	printf ("sending:%s\n", buf);
+	do
+    {
+        n = 0;
 
-	send (socket, buf, BUFLEN, 0);
-	free(client);
+        while ((n = recv (socket, bp, bytes_to_read, 0)) < BUFLEN)
+    	{
+            if (n <= 0)
+                break;
+    		bp += n;
+    		bytes_to_read -= n;
+    	}
+
+    	if (n > 0)
+        {
+            printf ("sending message of size: %d\n", sizeof(buf));
+            send (socket, buf, BUFLEN, 0);
+        }
+    } while (n > 0);
+	
+    free(client);
 	close (socket);
 	return NULL;
 }
