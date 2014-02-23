@@ -51,6 +51,7 @@
 int fd_server;
 int thing;
 int p[2];
+int connected;
 
 typedef struct {
 	int epoll_fd;
@@ -77,6 +78,7 @@ int main (int argc, char* argv[])
     pthread_attr_t tattr;
 	//info.events = calloc(EPOLL_QUEUE_LEN, sizeof(struct epoll_event));
 
+    connected = 0;
 	// set up the signal handler to close the server socket when CTRL-c is received
     act.sa_handler = close_fd;
     act.sa_flags = 0;
@@ -126,7 +128,7 @@ int main (int argc, char* argv[])
 	//info.epoll_fd = &epoll_fd;
 	//info.events = &events;
 
- 	if (pthread_attr_init(&tattr) != 0)
+ 	/*if (pthread_attr_init(&tattr) != 0)
     {	
     	perror ("Can't init thread attributes!");
         exit(1);	
@@ -144,7 +146,7 @@ int main (int argc, char* argv[])
         exit(1);
     }
 
-    pipe(p);
+    pipe(p);*/
 
 	// Execute the epoll event loop
 	while (TRUE) 
@@ -154,6 +156,7 @@ int main (int argc, char* argv[])
 		if (num_fds < 0) 
 			SystemFatal ("Error in epoll_wait!");
 
+		printf("servicing %d\n", connected);
 		for (i = 0; i < num_fds; i++) 
 		{
 	    		// Case 1: Error condition
@@ -188,12 +191,21 @@ int main (int argc, char* argv[])
 				if (epoll_ctl (info.epoll_fd, EPOLL_CTL_ADD, fd_new, &event) == -1) 
 					SystemFatal ("epoll_ctl");
 				
-				printf(" Remote Address:  %s\n", inet_ntoa(remote_addr.sin_addr));
+				//printf(" Remote Address:  %s\n", inet_ntoa(remote_addr.sin_addr));
+				connected++;
 				continue;
     		}
 			
-			int b = i;
-			write(p[1], &b, sizeof(b));
+
+			//int b = i;
+			//write(p[1], &b, sizeof(b));
+			if (!ClearSocket(info.events[i].data.fd)) 
+			{
+				// epoll will remove the fd from its set
+				// automatically when the fd is closed
+				connected--;
+				close (info.events[i].data.fd);
+			}
 		}
 	}
 	close(fd_server);
@@ -210,12 +222,7 @@ void * serviceClient(void * arg)
 		read(p[0], &a, sizeof(a));
 		
 		// Case 3: One of the sockets has read data
-		if (!ClearSocket(info.events[a].data.fd)) 
-		{
-			// epoll will remove the fd from its set
-			// automatically when the fd is closed
-			close (info.events[a].data.fd);
-		}
+		
 	}
 	return NULL;
 }
@@ -227,19 +234,6 @@ static int ClearSocket (int fd)
 
 	bp = buf;
 	bytes_to_read = BUFLEN;
-	/*while (TRUE)
-	{
-		bp = buf;
-		bytes_to_read = BUFLEN;
-		while ((n = recv (fd, bp, bytes_to_read, 0)) < BUFLEN)
-		{
-			bp += n;
-			bytes_to_read -= n;
-		}
-
-		send (fd, buf, BUFLEN, 0);
-		return 0;
-	}*/
 
 	do
     {
@@ -249,16 +243,19 @@ static int ClearSocket (int fd)
     	{
             if (n <= 0)
                 break;
+
     		bp += n;
     		bytes_to_read -= n;
     	}
 
     	if (n > 0)
         {
-            printf ("sending message of size: %d\n", sizeof(buf));
             send (fd, buf, BUFLEN, 0);
         }
     } while (n > 0);
+
+    return FALSE;
+    //close(fd);
 }
 
 // Prints the error stored in errno and aborts the program.
@@ -271,6 +268,6 @@ static void SystemFatal(const char* message)
 // close fd
 void close_fd (int signo)
 {
-        close(fd_server);
+    close(fd_server);
 	exit (EXIT_SUCCESS);
 }

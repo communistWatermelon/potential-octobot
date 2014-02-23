@@ -44,24 +44,34 @@
 char * message;
 int count;
 int loop;
+int threadsCreated;
+int threadsServicing;
+int threadsFinished;
+int messageSize;
+int clients;
 
 void createSocket(int*);
 void* sendData(void*);
 void createMessage(int);
 void initSocket(struct sockaddr_in*, int*, struct hostent*, char*);
 void connectSocket(int*, struct sockaddr_in*, struct hostent*);
+void updateStats();
 
 int main (int argc, char **argv)
 {
-	int messageSize = BUFLEN;
-	int clients = 5000;
 	int sd[clients], port;
 	struct hostent *hp;
 	struct sockaddr_in server;
 	char  *host;
     pthread_t clientThread[clients];
     size_t i  = 0;
+	messageSize = BUFLEN;
+	clients = 1;
     loop = 1;
+
+    threadsCreated = 0;
+	threadsServicing = 0;
+	threadsFinished = 0;
 
 	switch(argc)
 	{
@@ -92,7 +102,7 @@ int main (int argc, char **argv)
 			loop = atoi(argv[5]);
 		break;
 		default:
-			fprintf(stderr, "Usage: %s [host] [port] [messageSize] [threads]\n", argv[0]);
+			fprintf(stderr, "Usage: %s [host] [port] [messageSize] [threads] [loops]\n", argv[0]);
 			exit(1);
 	}
 
@@ -109,10 +119,18 @@ int main (int argc, char **argv)
 	        perror ("Can't create thread!");
 	        exit(1);
 	    }
+	    threadsCreated++;
     }
 
-	fflush(stdout);
+
+    while(threadsCreated != threadsFinished)
+    {
+    	sleep(1);
+		updateStats();
+    }
 	getchar();
+
+	printf("Finished!\n");
 	free(message);
 	
 	return (0);
@@ -176,12 +194,9 @@ void* sendData(void * args)
 	int sd = *((int *) args);
 	size_t i =0;
 
-	//printf("Thread %d is sending!\n", (++count));
-
 	for (i = 0; i < loop; i++)
 	{
 		send (sd, message, BUFLEN, 0);
-		printf("my pid is: %02x\n",  (unsigned)pthread_self());
 		bp = rbuf;
 
 		while ((n = recv (sd, bp, bytes_to_read, 0)) < BUFLEN)
@@ -194,8 +209,17 @@ void* sendData(void * args)
 		bytes_to_read = BUFLEN;
 	}
 
-	printf("... Thread %02x Complete!\n", (unsigned)pthread_self());
+	threadsFinished++;
 	
 	//close(sd);
 	return NULL;
+}
+
+void updateStats()
+{
+	printf("\033[2J");
+	printf("Message size: %d\n", messageSize);
+	printf("Threads Created: %d\n", threadsCreated);
+	printf("Threads Finished: %d\n", threadsFinished);
+	fflush(stdout);
 }

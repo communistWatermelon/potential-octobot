@@ -53,7 +53,9 @@ void *serviceClient(void*);
 void ioworker(int *, int, int, int, fd_set, fd_set);
 void addDescriptor(int*, int*, int*, int*, fd_set*);
 static void SystemFatal(const char* message);
-    
+
+int connected;
+
 int main()
 {
     //int client[FD_SETSIZE];
@@ -64,6 +66,7 @@ int main()
     fd_set rset;
     //fd_set allset;
     i = 0;
+    connected = 0;
     socklen_t clientLength = 0;    
     struct sockaddr_in server, client_addr;
     
@@ -86,6 +89,7 @@ int main()
         rset = allset;
         nready = select(maxfd + 1, &rset, NULL, NULL, NULL);
     
+        printf("servicing %d\n", connected);
         if (FD_ISSET(listenSocket, &rset)) /* New client connection */
         {
             //acceptClient(&listenSocket, &newSocket, (struct sockaddr *)&client_addr, &clientLength);
@@ -97,8 +101,8 @@ int main()
             if ((newSocket = accept(listenSocket, (struct sockaddr *) &client_addr, &clientLength)) == -1)
                 SystemFatal("accept error");
             
-            printf(" Remote Address:  %s\n", inet_ntoa(client_addr.sin_addr));
-
+           // printf(" Remote Address:  %s\n", inet_ntoa(client_addr.sin_addr));
+            connected++;
             for (i = 0; i < FD_SETSIZE; i++)
                 if (client[i] < 0)
                 {
@@ -203,13 +207,14 @@ void *serviceClient(void *selectInfo)
     
     write(info->sockfd, buf, BUFLEN);
     
-    /*if (n == 0)
+    if (n == 0)
     {
+        connected--;
         close(info->sockfd);
         FD_CLR(info->sockfd, &info->allset);
         info->client[info->i] = -1;
         free(info);
-    }*/
+    }
     
     return NULL;
 }
@@ -245,7 +250,7 @@ void acceptClient(int * server_socket, int * new_socket, struct sockaddr * clien
 		fprintf(stderr, "Can't accept client\n");
 		exit(1);
 	}
-	printf(" Remote Address:  %s\n", inet_ntoa(((struct sockaddr_in *)client)->sin_addr));
+	//printf(" Remote Address:  %s\n", inet_ntoa(((struct sockaddr_in *)client)->sin_addr));
 }
 
 void SocketOptions(int * socket)

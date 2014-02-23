@@ -39,6 +39,9 @@ void acceptClient(int*, int*, struct sockaddr*, socklen_t*);
 void SocketOptions(int *);
 void *serviceClient(void*);
 
+int connected;
+int connections;
+
 int main()
 {
     int listenSocket = 0;
@@ -51,6 +54,8 @@ int main()
     struct sockaddr_in server, client_addr;
     ClientWrapper arguments;
 
+    connected = 0;
+    connections = 0;
     createSocket(&listenSocket);
     SocketOptions(&listenSocket);
     bindSocket(&listenSocket, &server, &port);
@@ -59,11 +64,12 @@ int main()
     
     while (TRUE)
     {
+        printstats();
         acceptClient(&listenSocket, &newSocket, (struct sockaddr *)&client_addr, &clientLength);
         arguments.client_socket = &newSocket;
         arguments.client = &client_addr;
         
-        printf("Got a connection!");
+        // /printf("Got a connection!");
         
 		if (pthread_attr_init(&tattr) != 0)
         {	
@@ -86,6 +92,14 @@ int main()
     
     close(listenSocket);
     return 0;
+}
+
+void printstats()
+{
+
+    printf("Servicing: %d\n", connected);
+    printf("Total Connections: %d\n", connections);
+    printf("");
 }
 
 void createSocket(int * listen_socket)
@@ -143,7 +157,9 @@ void *serviceClient(void *clientInfo)
     struct sockaddr_in* client = malloc(sizeof(struct sockaddr_in));
     memcpy(client, ((ClientWrapper *) clientInfo)->client, sizeof(struct sockaddr_in));    
    
-    printf(" Remote Address:  %s\n", inet_ntoa(client->sin_addr));
+    //printf(" Remote Address:  %s\n", inet_ntoa(client->sin_addr));
+    connected++;
+    connections++;
 	bp = buf;
 	bytes_to_read = BUFLEN;
 	do
@@ -160,12 +176,13 @@ void *serviceClient(void *clientInfo)
 
     	if (n > 0)
         {
-            printf ("sending message of size: %d\n", sizeof(buf));
+            //printf ("sending message of size: %d\n", sizeof(buf));
             send (socket, buf, BUFLEN, 0);
         }
     } while (n > 0);
 	
     free(client);
 	close (socket);
+    connected--;
 	return NULL;
 }
