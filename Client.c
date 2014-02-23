@@ -34,7 +34,7 @@
 #include <string.h>
 #include <sys/syscall.h>
 #include <unistd.h>
-#include <time.h>
+#include <sys/time.h>
 #include <pthread.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
@@ -180,7 +180,7 @@ void* sendData(void * args)
 	int sd = *((int *) args);
 	size_t i =0;
 	
-	struct timeval start, end;
+	struct timeval start = { 0 }, end = { 0 };
 
 	for (i = 0; i < loop; i++)
 	{
