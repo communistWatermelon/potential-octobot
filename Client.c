@@ -34,6 +34,7 @@
 #include <string.h>
 #include <sys/syscall.h>
 #include <unistd.h>
+#include <time.h>
 #include <pthread.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
@@ -44,11 +45,6 @@
 char * message;
 int count;
 int loop;
-int threadsCreated;
-int threadsServicing;
-int threadsFinished;
-int messageSize;
-int clients;
 
 void createSocket(int*);
 void* sendData(void*);
@@ -59,8 +55,8 @@ void updateStats();
 
 int main (int argc, char **argv)
 {
-	messageSize = BUFLEN;
-	clients = 10000;
+	int messageSize = BUFLEN;
+	int clients = 15000;
     loop = 1;
 	int sd[clients], port;
 	struct hostent *hp;
@@ -68,10 +64,6 @@ int main (int argc, char **argv)
 	char  *host;
     pthread_t clientThread[clients];
     size_t i  = 0;
-
-    threadsCreated = 0;
-	threadsServicing = 0;
-	threadsFinished = 0;
 
 	switch(argc)
 	{
@@ -119,15 +111,9 @@ int main (int argc, char **argv)
 	        perror ("Can't create thread!");
 	        exit(1);
 	    }
-	    threadsCreated++;
     }
 
 
-    while((threadsCreated - threadsFinished) > 0) 
-    {
-    	sleep(1);
-		updateStats();
-    }
 	getchar();
 
 	printf("Finished!\n");
@@ -193,9 +179,12 @@ void* sendData(void * args)
 	char *bp, rbuf[BUFLEN];
 	int sd = *((int *) args);
 	size_t i =0;
+	
+	struct timeval start, end;
 
 	for (i = 0; i < loop; i++)
 	{
+	    gettimeofday(&start, NULL);
 		send (sd, message, BUFLEN, 0);
 		bp = rbuf;
 
@@ -207,19 +196,10 @@ void* sendData(void * args)
 
 		n = 0;
 		bytes_to_read = BUFLEN;
+		gettimeofday(&end, NULL);
+		printf("%ld\n", (end.tv_usec - start.tv_usec));
 	}
-
-	threadsFinished++;
 	
 	//close(sd);
 	return NULL;
-}
-
-void updateStats()
-{
-	printf("\033[2J\n");
-	printf("Message size: %d\n", messageSize);
-	printf("Threads Created: %d\n", threadsCreated);
-	printf("Threads Finished: %d\n", threadsFinished);
-	fflush(stdout);
 }
