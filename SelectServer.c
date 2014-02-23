@@ -209,7 +209,7 @@ void *serviceClient(void *selectInfo)
     
     if (n == 0)
     {
-        connected--;
+        
         close(info->sockfd);
         FD_CLR(info->sockfd, &info->allset);
         info->client[info->i] = -1;
