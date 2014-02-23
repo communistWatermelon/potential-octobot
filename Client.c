@@ -111,9 +111,6 @@ int main (int argc, char **argv)
 	    }
     }
 
-    for (i = 0; i < clients; i++)		
-    	pthread_join(clientThread[i], NULL);
-
 	fflush(stdout);
 	getchar();
 	free(message);
