@@ -60,7 +60,7 @@ void updateStats();
 int main (int argc, char **argv)
 {
 	messageSize = BUFLEN;
-	clients = 1;
+	clients = 5000;
     loop = 1;
 	int sd[clients], port;
 	struct hostent *hp;
