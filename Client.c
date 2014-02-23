@@ -32,6 +32,7 @@
 #include <errno.h>
 #include <stdlib.h>
 #include <string.h>
+#include <sys/syscall.h>
 #include <unistd.h>
 #include <pthread.h>
 #include <netinet/in.h>
@@ -108,8 +109,10 @@ int main (int argc, char **argv)
 	        perror ("Can't create thread!");
 	        exit(1);
 	    }
-		pthread_join(clientThread[i], NULL);
     }
+
+    for (i = 0; i < clients; i++)		
+    	pthread_join(clientThread[i], NULL);
 
 	fflush(stdout);
 	getchar();
@@ -176,11 +179,12 @@ void* sendData(void * args)
 	int sd = *((int *) args);
 	size_t i =0;
 
-	printf("Thread %d is sending!\n", (++count));
+	//printf("Thread %d is sending!\n", (++count));
 
 	for (i = 0; i < loop; i++)
 	{
 		send (sd, message, BUFLEN, 0);
+		printf("my pid is: %02x\n",  (unsigned)pthread_self());
 		bp = rbuf;
 
 		while ((n = recv (sd, bp, bytes_to_read, 0)) < BUFLEN)
@@ -193,7 +197,7 @@ void* sendData(void * args)
 		bytes_to_read = BUFLEN;
 	}
 
-	printf("... Thread %d Complete!\n", (count));
+	printf("... Thread %02x Complete!\n", (unsigned)pthread_self());
 	
 	//close(sd);
 	return NULL;
