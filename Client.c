@@ -59,15 +59,15 @@ void updateStats();
 
 int main (int argc, char **argv)
 {
+	messageSize = BUFLEN;
+	clients = 1;
+    loop = 1;
 	int sd[clients], port;
 	struct hostent *hp;
 	struct sockaddr_in server;
 	char  *host;
     pthread_t clientThread[clients];
     size_t i  = 0;
-	messageSize = BUFLEN;
-	clients = 1;
-    loop = 1;
 
     threadsCreated = 0;
 	threadsServicing = 0;
