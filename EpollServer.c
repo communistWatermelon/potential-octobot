@@ -49,9 +49,9 @@
 
 //Globals
 int fd_server;
-int thing;
-int p[2];
 int connected;
+int servicing;
+int finished;
 
 typedef struct {
 	int epoll_fd;
@@ -64,7 +64,8 @@ epollWrapper info;
 static void SystemFatal (const char* message);
 static int ClearSocket (int fd);
 void close_fd (int);
-void * serviceClient(void * arg);
+void updateStats();
+
 int main (int argc, char* argv[]) 
 {
 	int i, arg; 
@@ -74,11 +75,10 @@ int main (int argc, char* argv[])
 	struct sockaddr_in addr, remote_addr;
 	socklen_t addr_size = sizeof(struct sockaddr_in);
 	struct sigaction act;
-    pthread_t clientThread;
-    pthread_attr_t tattr;
-	//info.events = calloc(EPOLL_QUEUE_LEN, sizeof(struct epoll_event));
-
     connected = 0;
+    servicing = 0;
+    finished  = 0;
+
 	// set up the signal handler to close the server socket when CTRL-c is received
     act.sa_handler = close_fd;
     act.sa_flags = 0;
@@ -125,29 +125,6 @@ int main (int argc, char* argv[])
 	if (epoll_ctl (info.epoll_fd, EPOLL_CTL_ADD, fd_server, &event) == -1) 
 	SystemFatal("epoll_ctl");
     
-	//info.epoll_fd = &epoll_fd;
-	//info.events = &events;
-
- 	/*if (pthread_attr_init(&tattr) != 0)
-    {	
-    	perror ("Can't init thread attributes!");
-        exit(1);	
-    }
-
-    if (pthread_attr_setdetachstate(&tattr,PTHREAD_CREATE_DETACHED) != 0)
-    {
-    	perror ("Can't detach thread!");
-        exit(1);	
-    }
-
-    if (pthread_create(&clientThread, &tattr, &serviceClient, NULL) != 0)
-    {
-        perror ("Can't create thread!");
-        exit(1);
-    }
-
-    pipe(p);*/
-
 	// Execute the epoll event loop
 	while (TRUE) 
 	{
@@ -156,7 +133,7 @@ int main (int argc, char* argv[])
 		if (num_fds < 0) 
 			SystemFatal ("Error in epoll_wait!");
 
-		printf("servicing %d\n", connected);
+		updateStats();
 		for (i = 0; i < num_fds; i++) 
 		{
 	    		// Case 1: Error condition
@@ -196,14 +173,11 @@ int main (int argc, char* argv[])
 				continue;
     		}
 			
-
-			//int b = i;
-			//write(p[1], &b, sizeof(b));
 			if (!ClearSocket(info.events[i].data.fd)) 
 			{
 				// epoll will remove the fd from its set
 				// automatically when the fd is closed
-				connected--;
+				finished++;
 				close (info.events[i].data.fd);
 			}
 		}
@@ -212,19 +186,12 @@ int main (int argc, char* argv[])
 	exit (EXIT_SUCCESS);
 }
 
-
-void * serviceClient(void * arg)
+void updateStats()
 {
-	int a = 0;
-
-	while(TRUE)
-	{
-		read(p[0], &a, sizeof(a));
-		
-		// Case 3: One of the sockets has read data
-		
-	}
-	return NULL;
+	printf("\033[2J\n");
+	printf("total connections %d\n", connected);
+	printf("servicing %d\n", connected - finished);
+	printf("finished %d\n", finished);
 }
 
 static int ClearSocket (int fd) 
@@ -253,9 +220,7 @@ static int ClearSocket (int fd)
             send (fd, buf, BUFLEN, 0);
         }
     } while (n > 0);
-
     return FALSE;
-    //close(fd);
 }
 
 // Prints the error stored in errno and aborts the program.

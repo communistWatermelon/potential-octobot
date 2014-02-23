@@ -60,7 +60,7 @@ void updateStats();
 int main (int argc, char **argv)
 {
 	messageSize = BUFLEN;
-	clients = 5000;
+	clients = 10000;
     loop = 1;
 	int sd[clients], port;
 	struct hostent *hp;
@@ -123,7 +123,7 @@ int main (int argc, char **argv)
     }
 
 
-    while(threadsCreated != threadsFinished)
+    while((threadsCreated - threadsFinished) > 0) 
     {
     	sleep(1);
 		updateStats();
@@ -217,7 +217,7 @@ void* sendData(void * args)
 
 void updateStats()
 {
-	printf("\033[2J");
+	printf("\033[2J\n");
 	printf("Message size: %d\n", messageSize);
 	printf("Threads Created: %d\n", threadsCreated);
 	printf("Threads Finished: %d\n", threadsFinished);
