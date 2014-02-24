@@ -1,26 +1,28 @@
 /*---------------------------------------------------------------------------------------
---	SOURCE FILE:		epoll_svr.c -   A simple echo server using the epoll API
+--	SOURCE FILE:	EpollServer.c
 --
---	PROGRAM:		epolls
---				gcc -Wall -ggdb -o epolls epoll_svr.c  
+--	PROGRAM:		epollServer
 --
---	FUNCTIONS:		Berkeley Socket API
+--	FUNCTIONS:		static void SystemFatal (const char* message)
+--					static int ClearSocket (int fd)
+--					void close_fd (int)
+--					void updateStats()
+--					void handleData(int*)
+--					void setupSignal()
+--					void setupListenSocket(int)
+--					int handleError(int * i)
+--					void setupFD(struct epoll_event * event)
+--					int handleConnection(struct epoll_event * event, int * i)
+--					void handleData(int * i)
 --
---	DATE:			February 2, 2008
+--	DATE:			February 15, 2014
 --
---	REVISIONS:		(Date and Description)
+--	DESIGNERS:		Jacob Miner
 --
---	DESIGNERS:		Design based on various code snippets found on C10K links
---				Modified and improved: Aman Abdulla - February 2008
---
---	PROGRAMMERS:		Aman Abdulla
+--	PROGRAMMERS:	Jacob Miner
 --
 --	NOTES:
---	The program will accept TCP connections from client machines.
--- 	The program will read data from the client socket and simply echo it back.
---	Design is a simple, single-threaded server using non-blocking, edge-triggered
---	I/O to handle simultaneous inbound connections. 
---	Test with accompanying client application: epoll_clnt.c
+--	Single threaded TCP echo server using Epoll to service clients.
 ---------------------------------------------------------------------------------------*/
 
 #include <assert.h>
@@ -72,6 +74,24 @@ void setupFD(struct epoll_event * event);
 int handleConnection(struct epoll_event * event, int * i);
 void handleData(int * i);
 
+
+/*------------------------------------------------------------------------------
+--
+--  FUNCTION:    main
+--
+--  DATE:       February 15, 2014
+--
+--  DESIGNERS:  Jacob Miner  
+--
+--  PROGRAMMER: Jacob Miner 
+--
+--  INTERFACE:  main(argc, char* argv[])
+--
+--  RETURNS:  int - 0 on success
+--
+--  NOTES: The main thread of the program. Calls all other functions.
+--  
+------------------------------------------------------------------------------*/
 int main (int argc, char* argv[]) 
 {
 	int i; 
@@ -114,6 +134,24 @@ int main (int argc, char* argv[])
 	exit (EXIT_SUCCESS);
 }
 
+
+/*------------------------------------------------------------------------------
+--
+--  FUNCTION:    setupSignal
+--
+--  DATE:       February 15, 2014
+--
+--  DESIGNERS:  Jacob Miner  
+--
+--  PROGRAMMER: Jacob Miner 
+--
+--  INTERFACE:  setupSignal()
+--
+--  RETURNS:  void
+--
+--  NOTES: Sets up the signal handler to call close_fd when SIGINT is called.
+--  
+------------------------------------------------------------------------------*/
 void setupSignal()
 {
 	struct sigaction act;
@@ -126,6 +164,25 @@ void setupSignal()
     }	
 }
 
+
+/*------------------------------------------------------------------------------
+--
+--  FUNCTION:    setupListenSocket
+--
+--  DATE:       February 15, 2014
+--
+--  DESIGNERS:  Jacob Miner  
+--
+--  PROGRAMMER: Jacob Miner 
+--
+--  INTERFACE:  setupListenSocket(int port)
+--							port - the listening socket to be set up.
+--
+--  RETURNS:  void
+--
+--  NOTES: Sets up the listening socket, handles error.s
+--  
+------------------------------------------------------------------------------*/
 void setupListenSocket(int port)
 {
 	int arg;
@@ -154,6 +211,26 @@ void setupListenSocket(int port)
 		SystemFatal("bind");
 }
 
+
+/*------------------------------------------------------------------------------
+--
+--  FUNCTION:    setupFD
+--
+--  DATE:       February 15, 2014
+--
+--  DESIGNERS:  Jacob Miner  
+--
+--  PROGRAMMER: Jacob Miner 
+--
+--  INTERFACE:  setupFD(struct epoll_event * event)
+--							event - the event structure necessary for epoll
+--
+--  RETURNS:  void
+--
+--  NOTES: Wrapper for setting up the file descriptors and event structures for 
+--			epoll to function.
+--  
+------------------------------------------------------------------------------*/
 void setupFD(struct epoll_event * event)
 {
 	// Listen for fd_news; SOMAXCONN is 128 by default
@@ -172,6 +249,24 @@ void setupFD(struct epoll_event * event)
 		SystemFatal("epoll_ctl");
 }
 
+/*------------------------------------------------------------------------------
+--
+--  FUNCTION:    handleError
+--
+--  DATE:       February 15, 2014
+--
+--  DESIGNERS:  Jacob Miner  
+--
+--  PROGRAMMER: Jacob Miner 
+--
+--  INTERFACE:  handleError(int * i)
+--							i - the place in the events array where the error occured.
+--
+--  RETURNS:  int - returns 1 if there is an EPOLLERR, otherwise 0
+--
+--  NOTES: Handles errors in the event loop for epoll
+--  
+------------------------------------------------------------------------------*/
 int handleError(int * i)
 {
 	if (info.events[*i].events & (EPOLLHUP | EPOLLERR)) 
@@ -184,6 +279,25 @@ int handleError(int * i)
 	return 0;
 }
 
+/*------------------------------------------------------------------------------
+--
+--  FUNCTION:    handleConnection
+--
+--  DATE:       February 15, 2014
+--
+--  DESIGNERS:  Jacob Miner  
+--
+--  PROGRAMMER: Jacob Miner 
+--
+--  INTERFACE:  handleConnection(struct epoll_event * event, int * i)
+--							event - the event structure necessary for epoll
+--							i - the place in the events array where the error occured.
+--
+--  RETURNS:  int - 1 if a client connects, zero otherwise.
+--
+--  NOTES:Handles connections in the event loop for epoll
+--  
+------------------------------------------------------------------------------*/
 int handleConnection(struct epoll_event * event, int * i)
 {
 	int fd_new;
@@ -220,6 +334,24 @@ int handleConnection(struct epoll_event * event, int * i)
 	return 0;
 }
 
+/*------------------------------------------------------------------------------
+--
+--  FUNCTION:    handleData
+--
+--  DATE:       February 15, 2014
+--
+--  DESIGNERS:  Jacob Miner  
+--
+--  PROGRAMMER: Jacob Miner 
+--
+--  INTERFACE:  handleData(int * i)
+--					i - the place in the events array where the error occured.
+--
+--  RETURNS:  void
+--
+--  NOTES: Handles the data in the event loop for epoll
+--  
+------------------------------------------------------------------------------*/
 void handleData(int * i)
 {
 	if (!ClearSocket(info.events[*i].data.fd)) 
@@ -231,6 +363,23 @@ void handleData(int * i)
 	}
 }
 
+/*------------------------------------------------------------------------------
+--
+--  FUNCTION:    updateStats
+--
+--  DATE:       February 15, 2014
+--
+--  DESIGNERS:  Jacob Miner  
+--
+--  PROGRAMMER: Jacob Miner 
+--
+--  INTERFACE:  updateStats()
+--
+--  RETURNS:  void
+--
+--  NOTES: Prints the current stats of the connections 
+--  
+------------------------------------------------------------------------------*/
 void updateStats()
 {
 	printf("\033[2J\n");
@@ -239,6 +388,24 @@ void updateStats()
 	printf("finished %d\n", finished);
 }
 
+/*------------------------------------------------------------------------------
+--
+--  FUNCTION:    ClearSocket
+--
+--  DATE:       February 15, 2014
+--
+--  DESIGNERS:  Jacob Miner  
+--
+--  PROGRAMMER: Jacob Miner 
+--
+--  INTERFACE:  ClearSocket(int fd)
+--							fd - the file descriptor to collect data from and echo to
+--
+--  RETURNS:  int - returns 0 when completed.
+--
+--  NOTES: Reads from the client, then echos the data back.
+--  
+------------------------------------------------------------------------------*/
 static int ClearSocket (int fd) 
 {
 	int	n, bytes_to_read;
@@ -267,14 +434,49 @@ static int ClearSocket (int fd)
     return FALSE;
 }
 
-// Prints the error stored in errno and aborts the program.
+/*------------------------------------------------------------------------------
+--
+--  FUNCTION:    SystemFatal
+--
+--  DATE:       February 15, 2014
+--
+--  DESIGNERS:  Jacob Miner  
+--
+--  PROGRAMMER: Jacob Miner 
+--
+--  INTERFACE:  SystemFatal(const char* message)
+--							message - addition message to print with the error.
+--
+--  RETURNS:  void
+--
+--  NOTES: Prints the error stored in errno and aborts the program.
+--  
+------------------------------------------------------------------------------*/
 static void SystemFatal(const char* message) 
 {
     perror (message);
     exit (EXIT_FAILURE);
 }
 
-// close fd
+
+/*------------------------------------------------------------------------------
+--
+--  FUNCTION:    close_fd
+--
+--  DATE:       February 15, 2014
+--
+--  DESIGNERS:  Jacob Miner  
+--
+--  PROGRAMMER: Jacob Miner 
+--
+--  INTERFACE:  close_fd(int signo)
+--							signo - necessary argument for signal handling functopn/
+--
+--  RETURNS:  void
+--
+--  NOTES: The sigint handler. Closes fd_server to prevent memory leaks, then exits porgram
+--  
+------------------------------------------------------------------------------*/
 void close_fd (int signo)
 {
     close(fd_server);

@@ -1,3 +1,25 @@
+/*---------------------------------------------------------------------------------------
+--  SOURCE FILE:    EpollServer.c
+--
+--  PROGRAM:        epollServer
+--
+--  FUNCTIONS:      static void SystemFatal (const char* message)
+--                  void createSocket(int*)
+--                  void bindSocket(int*, struct sockaddr_in*, int*)
+--                  void SocketOptions(int*)
+--                  void *serviceClient(void*)
+--                  void ioworker(int *, int, int, int, fd_set, fd_set)
+--                  static void SystemFatal(const char* message)
+--
+--  DATE:           February 16, 2014
+--
+--  DESIGNERS:      Jacob Miner
+--
+--  PROGRAMMERS:    Jacob Miner
+--
+--  NOTES:
+--  Single threaded TCP echo server using select to service clients.
+---------------------------------------------------------------------------------------*/
 /*
 	main / listener
 	set up server
@@ -54,6 +76,24 @@ static void SystemFatal(const char* message);
 
 int connected;
 
+
+/*------------------------------------------------------------------------------
+--
+--  FUNCTION:    main
+--
+--  DATE:       February 16, 2014
+--
+--  DESIGNERS:  Jacob Miner  
+--
+--  PROGRAMMER: Jacob Miner 
+--
+--  INTERFACE:  main()
+--
+--  RETURNS:  int - 0 on success
+--
+--  NOTES: The main thread of the program. Calls all other functions.
+--  
+------------------------------------------------------------------------------*/
 int main()
 {
     //int client[FD_SETSIZE];
@@ -127,12 +167,53 @@ int main()
     return 0;
 }
 
+/*------------------------------------------------------------------------------
+--
+--  FUNCTION:    SystemFatal
+--
+--  DATE:       February 16, 2014
+--
+--  DESIGNERS:  Jacob Miner  
+--
+--  PROGRAMMER: Jacob Miner 
+--
+--  INTERFACE:  SystemFatal(const char* message)
+--                          message - addition message to print with the error.
+--
+--  RETURNS:  void
+--
+--  NOTES: Prints the error stored in errno and aborts the program.
+--  
+------------------------------------------------------------------------------*/
 static void SystemFatal(const char* message)
 {
     perror (message);
     exit (EXIT_FAILURE);
 }
 
+/*------------------------------------------------------------------------------
+--
+--  FUNCTION:    ioworker
+--
+--  DATE:       February 16, 2014
+--
+--  DESIGNERS:  Jacob Miner  
+--
+--  PROGRAMMER: Jacob Miner 
+--
+--  INTERFACE:  ioworker(int *client, int sockfd, int nready, int maxi, fd_set rset, fd_set allset)
+--                      client - the socket with the client connection
+--                      sockfd - the file descriptors for the server
+--                      nready - the number of clients ready
+--                      maxi - maximum value to loop through
+--                      rset - the fd set rset
+--                      allset - the fd set allset
+--
+--  RETURNS:  void
+--
+--  NOTES: loops through the descriptors and checks to see which one has data.
+--  
+------------------------------------------------------------------------------*/
 void ioworker(int *client, int sockfd, int nready, int maxi, fd_set rset, fd_set allset)
 {
     size_t i = 0;
@@ -160,6 +241,24 @@ void ioworker(int *client, int sockfd, int nready, int maxi, fd_set rset, fd_set
     }
 }
 
+/*------------------------------------------------------------------------------
+--
+--  FUNCTION:    serviceClient
+--
+--  DATE:       February 16, 2014
+--
+--  DESIGNERS:  Jacob Miner  
+--
+--  PROGRAMMER: Jacob Miner 
+--
+--  INTERFACE:  serviceClient(void *selectInfo)
+--                      selectInfo - a struct with all the necessary variables to service the client 
+--
+--  RETURNS:  void
+--
+--  NOTES: Reads in client data, echoes it back to them, then closes the socket.
+--  
+------------------------------------------------------------------------------*/
 void *serviceClient(void *selectInfo)
 {
     int n = 0, bytes_to_read = 0;
@@ -191,6 +290,24 @@ void *serviceClient(void *selectInfo)
     return NULL;
 }
 
+/*------------------------------------------------------------------------------
+--
+--  FUNCTION:   createSocket
+--
+--  DATE:       February 16, 2014
+--
+--  DESIGNERS:  Jacob Miner  
+--
+--  PROGRAMMER: Jacob Miner 
+--
+--  INTERFACE: createSocket(int * listen_socket)
+--                  listen_socket - the socket to listen on
+--
+--  RETURNS:  void
+--
+--  NOTES: Wrapper for socket(), that handles errors
+--  
+------------------------------------------------------------------------------*/
 void createSocket(int * listen_socket)
 {
     if ((*listen_socket = socket(AF_INET, SOCK_STREAM, 0)) == -1)
@@ -200,6 +317,26 @@ void createSocket(int * listen_socket)
 	}
 }
 
+/*------------------------------------------------------------------------------
+--
+--  FUNCTION:   bindSocket
+--
+--  DATE:       February 16, 2014
+--
+--  DESIGNERS:  Jacob Miner  
+--
+--  PROGRAMMER: Jacob Miner 
+--
+--  INTERFACE: bindSocket(int * socket, struct sockaddr_in * server, int * port)
+--                      socket - the socket to bind
+--                      server - the server information
+--                      port - the port to bind
+--
+--  RETURNS:  void
+--
+--  NOTES: Wrapper for bind that handles errors
+--  
+------------------------------------------------------------------------------*/
 void bindSocket(int * socket, struct sockaddr_in * server, int * port)
 {
     bzero((char *)server, sizeof(struct sockaddr_in));
@@ -214,6 +351,24 @@ void bindSocket(int * socket, struct sockaddr_in * server, int * port)
 	}
 }
 
+/*------------------------------------------------------------------------------
+--
+--  FUNCTION:   SocketOptions
+--
+--  DATE:       February 16, 2014
+--
+--  DESIGNERS:  Jacob Miner  
+--
+--  PROGRAMMER: Jacob Miner 
+--
+--  INTERFACE: SocketOptions(int * socket)
+--                      socket - the socket to set the options on
+--
+--  RETURNS:  void
+--
+--  NOTES: Sets relavent socket options, like reuse addr
+--  
+------------------------------------------------------------------------------*/
 void SocketOptions(int * socket)
 {
     int arg = 1;

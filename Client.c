@@ -11,7 +11,7 @@
 --					void setArgs(int*, char**, char**, int*, int*, int*)
 --					void updateStats()
 --
---	DATE:			Febuary 22, 2014
+--	DATE:			February 14, 2014
 --
 --	DESIGNERS:		Jacob Miner
 --
@@ -55,7 +55,7 @@ void updateStats();
 --
 --	FUNCTION:	main
 --
---	DATE:		February 22, 2014
+--	DATE:		February 14, 2014
 --
 --	DESIGNERS:  Jacob Miner  
 --
@@ -109,7 +109,7 @@ int main (int argc, char **argv)
 --
 --	FUNCTION:	 setArgs
 --
---	DATE:		February 22, 2014
+--	DATE:		February 14, 2014
 --
 --	DESIGNERS:  Jacob Miner  
 --
@@ -168,7 +168,7 @@ void setArgs(int *argc, char** argv, char** host, int * port, int* messageSize, 
 --
 --	FUNCTION:	 createMessage
 --
---	DATE:		February 22, 2014
+--	DATE:		February 14, 2014
 --
 --	DESIGNERS:  Jacob Miner  
 --
@@ -204,7 +204,7 @@ void createMessage(int messageSize)
 --
 --	FUNCTION:	 createSocket
 --
---	DATE:		February 22, 2014
+--	DATE:		February 14, 2014
 --
 --	DESIGNERS:  Jacob Miner  
 --
@@ -231,7 +231,7 @@ void createSocket(int * sd)
 --
 --	FUNCTION:	 initSocket
 --
---	DATE:		February 22, 2014
+--	DATE:		February 14, 2014
 --
 --	DESIGNERS:  Jacob Miner  
 --
@@ -265,7 +265,7 @@ void initSocket(struct sockaddr_in *server, int * port, struct hostent *hp, char
 --
 --	FUNCTION:	 connectSocket
 --
---	DATE:		February 22, 2014
+--	DATE:		February 14, 2014
 --
 --	DESIGNERS:  Jacob Miner  
 --
@@ -294,7 +294,7 @@ void connectSocket(int *sd, struct sockaddr_in *server)
 --
 --	FUNCTION:	sendData
 --
---	DATE:		February 22, 2014
+--	DATE:		February 14, 2014
 --
 --	DESIGNERS:  Jacob Miner  
 --

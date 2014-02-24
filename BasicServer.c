@@ -9,7 +9,7 @@
 --                  void SocketOptions(int *)
 --                  void *serviceClient(void*)
 --
---  DATE:           Febuary 22, 2014
+--  DATE:           February 14, 2014
 --
 --  DESIGNERS:      Jacob Miner
 --
@@ -68,7 +68,7 @@ int connections;
 --
 --  FUNCTION:   main
 --
---  DATE:       February 22, 2014
+--  DATE:       February 14, 2014
 --
 --  DESIGNERS:  Jacob Miner  
 --
@@ -135,7 +135,7 @@ int main()
 --
 --  FUNCTION:   printstats
 --
---  DATE:       February 22, 2014
+--  DATE:       February 14, 2014
 --
 --  DESIGNERS:  Jacob Miner  
 --
@@ -158,7 +158,7 @@ void printstats()
 --
 --  FUNCTION:   createSocket
 --
---  DATE:       February 22, 2014
+--  DATE:       February 14, 2014
 --
 --  DESIGNERS:  Jacob Miner  
 --
@@ -185,7 +185,7 @@ void createSocket(int * listen_socket)
 --
 --  FUNCTION:   bindSocket
 --
---  DATE:       February 22, 2014
+--  DATE:       February 14, 2014
 --
 --  DESIGNERS:  Jacob Miner  
 --
@@ -219,7 +219,7 @@ void bindSocket(int * socket, struct sockaddr_in * server, int * port)
 --
 --  FUNCTION:   acceptClient
 --
---  DATE:       February 22, 2014
+--  DATE:       February 14, 2014
 --
 --  DESIGNERS:  Jacob Miner  
 --
@@ -250,7 +250,7 @@ void acceptClient(int * server_socket, int * new_socket, struct sockaddr * clien
 --
 --  FUNCTION:   SocketOptions
 --
---  DATE:       February 22, 2014
+--  DATE:       February 14, 2014
 --
 --  DESIGNERS:  Jacob Miner  
 --
@@ -278,7 +278,7 @@ void SocketOptions(int * socket)
 --
 --  FUNCTION:   serviceClient
 --
---  DATE:       February 22, 2014
+--  DATE:       February 14, 2014
 --
 --  DESIGNERS:  Jacob Miner  
 --
