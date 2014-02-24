@@ -59,6 +59,7 @@ void bindSocket(int*, struct sockaddr_in*, int*);
 void acceptClient(int*, int*, struct sockaddr*, socklen_t*);
 void SocketOptions(int *);
 void *serviceClient(void*);
+void printstats();
 
 int connected;
 int connections;
@@ -107,8 +108,6 @@ int main()
         arguments.client_socket = &newSocket;
         arguments.client = &client_addr;
         
-        // /printf("Got a connection!");
-        
 		if (pthread_attr_init(&tattr) != 0)
         {	
         	perror ("Can't init thread attributes!");
@@ -153,7 +152,6 @@ void printstats()
 {
     printf("Servicing: %d\n", connected);
     printf("Total Connections: %d\n", connections);
-    printf("");
 }
 
 /*------------------------------------------------------------------------------
@@ -299,7 +297,6 @@ void *serviceClient(void *clientInfo)
     int n = 0, bytes_to_read = 0;
     char *bp = 0;
     char buf[BUFLEN] = { 0 };
-    int x = 1;
     
     int socket = *((ClientWrapper *) (clientInfo))->client_socket;
     
