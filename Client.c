@@ -88,7 +88,7 @@ int main (int argc, char **argv)
 	{
 		createSocket(&sd[i]);
 		initSocket(&server, &port, hp, host);
-		connectSocket(&sd[i], &server, hp);
+		connectSocket(&sd[i], &server);
 
 		if (pthread_create(&clientThread[i], NULL, &sendData, (void *) &sd[i]) != 0)
 	    {	
