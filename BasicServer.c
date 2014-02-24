@@ -1,3 +1,24 @@
+/*---------------------------------------------------------------------------------------
+--  SOURCE FILE:    BasicServer.c - A robust tcp load testing client.
+--
+--  PROGRAM:        BasicServer
+--
+--  FUNCTIONS:      void createSocket(int*)
+--                  void bindSocket(int*, struct sockaddr_in*, int*)
+--                  void acceptClient(int*, int*, struct sockaddr*, socklen_t*)
+--                  void SocketOptions(int *)
+--                  void *serviceClient(void*)
+--
+--  DATE:           Febuary 22, 2014
+--
+--  DESIGNERS:      Jacob Miner
+--
+--  PROGRAMMERS:    Jacob Miner
+--
+--  NOTES:
+--  A TCP echo server using multithreading.
+--  
+---------------------------------------------------------------------------------------*/
 /*
 	main / listener
 	set up server
@@ -42,6 +63,23 @@ void *serviceClient(void*);
 int connected;
 int connections;
 
+/*------------------------------------------------------------------------------
+--
+--  FUNCTION:   main
+--
+--  DATE:       February 22, 2014
+--
+--  DESIGNERS:  Jacob Miner  
+--
+--  PROGRAMMER: Jacob Miner 
+--
+--  INTERFACE: main()
+--
+--  RETURNS:  int - 0 on success
+--
+--  NOTES: The main thread of the program. Calls all other functions.
+--  
+------------------------------------------------------------------------------*/
 int main()
 {
     int listenSocket = 0;
@@ -94,14 +132,48 @@ int main()
     return 0;
 }
 
+/*------------------------------------------------------------------------------
+--
+--  FUNCTION:   printstats
+--
+--  DATE:       February 22, 2014
+--
+--  DESIGNERS:  Jacob Miner  
+--
+--  PROGRAMMER: Jacob Miner 
+--
+--  INTERFACE: printstats()
+--
+--  RETURNS:  void
+--
+--  NOTES: Prints the current stats of the connections 
+--  
+------------------------------------------------------------------------------*/
 void printstats()
 {
-
     printf("Servicing: %d\n", connected);
     printf("Total Connections: %d\n", connections);
     printf("");
 }
 
+/*------------------------------------------------------------------------------
+--
+--  FUNCTION:   createSocket
+--
+--  DATE:       February 22, 2014
+--
+--  DESIGNERS:  Jacob Miner  
+--
+--  PROGRAMMER: Jacob Miner 
+--
+--  INTERFACE: createSocket(int * listen_socket)
+--                  listen_socket - the socket to listen on
+--
+--  RETURNS:  void
+--
+--  NOTES: Wrapper for socket(), that handles errors
+--  
+------------------------------------------------------------------------------*/
 void createSocket(int * listen_socket)
 {
     if ((*listen_socket = socket(AF_INET, SOCK_STREAM, 0)) == -1)
@@ -111,6 +183,26 @@ void createSocket(int * listen_socket)
 	}
 }
 
+/*------------------------------------------------------------------------------
+--
+--  FUNCTION:   bindSocket
+--
+--  DATE:       February 22, 2014
+--
+--  DESIGNERS:  Jacob Miner  
+--
+--  PROGRAMMER: Jacob Miner 
+--
+--  INTERFACE: bindSocket(int * socket, struct sockaddr_in * server, int * port)
+--                      socket - the socket to bind
+--                      server - the server information
+--                      port - the port to bind
+--
+--  RETURNS:  void
+--
+--  NOTES: Wrapper for bind that handles errors
+--  
+------------------------------------------------------------------------------*/
 void bindSocket(int * socket, struct sockaddr_in * server, int * port)
 {
     bzero((char *)server, sizeof(struct sockaddr_in));
@@ -125,6 +217,27 @@ void bindSocket(int * socket, struct sockaddr_in * server, int * port)
 	}
 }
 
+/*------------------------------------------------------------------------------
+--
+--  FUNCTION:   acceptClient
+--
+--  DATE:       February 22, 2014
+--
+--  DESIGNERS:  Jacob Miner  
+--
+--  PROGRAMMER: Jacob Miner 
+--
+--  INTERFACE: acceptClient(int * server_socket, int * new_socket, struct sockaddr * client, socklen_t * client_len)
+--                      server_socket - the servers listening socket
+--                      new_socket - the new socket for a client
+--                      client - client sockaddr structure
+--                      client_len - client length
+--
+--  RETURNS:  void
+--
+--  NOTES: Weapper for accept() that handles errors
+--  
+------------------------------------------------------------------------------*/
 void acceptClient(int * server_socket, int * new_socket, struct sockaddr * client, socklen_t * client_len)
 {
 	*client_len= sizeof(client);
@@ -135,6 +248,24 @@ void acceptClient(int * server_socket, int * new_socket, struct sockaddr * clien
 	}
 }
 
+/*------------------------------------------------------------------------------
+--
+--  FUNCTION:   SocketOptions
+--
+--  DATE:       February 22, 2014
+--
+--  DESIGNERS:  Jacob Miner  
+--
+--  PROGRAMMER: Jacob Miner 
+--
+--  INTERFACE: SocketOptions(int * socket)
+--                      socket - the socket to set the options on
+--
+--  RETURNS:  void
+--
+--  NOTES: Sets relavent socket options, like reuse addr
+--  
+------------------------------------------------------------------------------*/
 void SocketOptions(int * socket)
 {
     int arg = 1;
@@ -145,6 +276,24 @@ void SocketOptions(int * socket)
     }
 }
 
+/*------------------------------------------------------------------------------
+--
+--  FUNCTION:   serviceClient
+--
+--  DATE:       February 22, 2014
+--
+--  DESIGNERS:  Jacob Miner  
+--
+--  PROGRAMMER: Jacob Miner 
+--
+--  INTERFACE: serviceClient(void *clientInfo)
+--                      clientInfo - all the information needed to echo back to the client
+--
+--  RETURNS:  void
+--
+--  NOTES: The thread created after a client connects to service them.
+--  
+------------------------------------------------------------------------------*/
 void *serviceClient(void *clientInfo)
 {
     int n = 0, bytes_to_read = 0;
