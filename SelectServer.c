@@ -47,11 +47,9 @@ typedef struct
 
 void createSocket(int*);
 void bindSocket(int*, struct sockaddr_in*, int*);
-void acceptClient(int*, int*, struct sockaddr*, socklen_t*);
 void SocketOptions(int*);
 void *serviceClient(void*);
 void ioworker(int *, int, int, int, fd_set, fd_set);
-void addDescriptor(int*, int*, int*, int*, fd_set*);
 static void SystemFatal(const char* message);
 
 int connected;
@@ -92,16 +90,10 @@ int main()
         printf("servicing %d\n", connected);
         if (FD_ISSET(listenSocket, &rset)) /* New client connection */
         {
-            //acceptClient(&listenSocket, &newSocket, (struct sockaddr *)&client_addr, &clientLength);
-            //addDescriptor(client, &newSocket, &maxfd, &maxi, &allset);
-            
-//        	if (--nready <= 0)
-  //      		continue;	/* no more readable descriptors */
             clientLength = sizeof(client_addr);
             if ((newSocket = accept(listenSocket, (struct sockaddr *) &client_addr, &clientLength)) == -1)
                 SystemFatal("accept error");
             
-           // printf(" Remote Address:  %s\n", inet_ntoa(client_addr.sin_addr));
             connected++;
             for (i = 0; i < FD_SETSIZE; i++)
                 if (client[i] < 0)
@@ -144,8 +136,6 @@ static void SystemFatal(const char* message)
 void ioworker(int *client, int sockfd, int nready, int maxi, fd_set rset, fd_set allset)
 {
     size_t i = 0;
-    pthread_t processingThread;
-    pthread_attr_t tattr;
     SelectWrapper * info;
     
     for (i = 0; i <= maxi; i++)	/* check all clients for data */
@@ -162,24 +152,6 @@ void ioworker(int *client, int sockfd, int nready, int maxi, fd_set rset, fd_set
  		    info->i      = i;
  		    info->allset = allset;
  		
-    		/*if (pthread_attr_init(&tattr) != 0)
-            {   
-                perror ("Can't init thread attributes!");
-                exit(1);    
-            }
-
-            if (pthread_attr_setdetachstate(&tattr,PTHREAD_CREATE_DETACHED) != 0)
-            {
-                perror ("Can't detach thread!");
-                exit(1);    
-            }
-
-            if (pthread_create(&processingThread, &tattr, &serviceClient, (void *) info) != 0)
-            {
-                perror ("Can't create thread!");
-                exit(1);
-            }*/
-
             serviceClient((void*) info);
                 
             if (--nready <= 0)
@@ -242,17 +214,6 @@ void bindSocket(int * socket, struct sockaddr_in * server, int * port)
 	}
 }
 
-void acceptClient(int * server_socket, int * new_socket, struct sockaddr * client, socklen_t * client_len)
-{
-	*client_len= sizeof(client);
-	if ((*new_socket = accept (*server_socket, (struct sockaddr *)client, client_len)) == -1)
-	{
-		fprintf(stderr, "Can't accept client\n");
-		exit(1);
-	}
-	//printf(" Remote Address:  %s\n", inet_ntoa(((struct sockaddr_in *)client)->sin_addr));
-}
-
 void SocketOptions(int * socket)
 {
     int arg = 1;
@@ -261,35 +222,4 @@ void SocketOptions(int * socket)
 		perror("SetSockOpt Failed!");
 		exit(1);
     }
-}
-
-void addDescriptor(int * client, int * newSocket, int * maxfd, int * maxi, fd_set * allset)
-{
-    size_t i = 0;
-    
-    for (i = 0; i < FD_SETSIZE; i++)
-    {
-		if (client[i] < 0)
-		{
-	        client[i] = *newSocket;	/* save descriptor */
-            break;
-		}
-	}
-	
-	if (i == FD_SETSIZE)
-	{
-		printf ("Too many clients\n");
-		exit(1);
-	}
-	
-    FD_SET(*newSocket, allset);
-    if (*newSocket > *maxfd)
-    {
-        *maxfd = *newSocket;
-    }
-       
-    if (i > *maxi)
-    {
-		*maxi = i;	/* new max index in client[] array */
-	}
 }
