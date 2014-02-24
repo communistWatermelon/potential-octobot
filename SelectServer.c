@@ -20,22 +20,6 @@
 --  NOTES:
 --  Single threaded TCP echo server using select to service clients.
 ---------------------------------------------------------------------------------------*/
-/*
-	main / listener
-	set up server
-	bind to port
-	wait for select call
-    	accept connection
-	    	add client to list
-	    	create processing worker
-	    	
-processing worker
-	if client disconnects
-		remove client from list
-	wait for input 
-	echo input to client
-	write send / recv results
-*/
 #include <stdio.h>
 #include <sys/types.h>
 #include <sys/socket.h>
